@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Image Converter</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    margin: 2rem;
+    background: #f9f9f9;
+  }
+  h1 {
+    margin-bottom: 1rem;
+  }
+  label {
+    display: block;
+    margin-top: 1rem;
+  }
+  select, input[type="file"], button {
+    margin-top: 0.5rem;
+  }
+  #output {
+    margin-top: 1rem;
+  }
+</style>
+</head>
+<body>
+<h1>Image Converter (Frontend Only)</h1>
+<p>Supported conversions:</p>
+<ul>
+  <li>JPG to PNG, BMP, TIFF</li>
+  <li>PNG to WEBP</li>
+</ul>
+<label for="inputFile">Select image (JPG or PNG):</label>
+<input type="file" id="inputFile" accept="image/jpeg, image/png" />
+
+<label for="formatSelect">Convert to:</label>
+<select id="formatSelect" disabled>
+  <option value="">-- Select format --</option>
+</select>
+
+<button id="convertBtn" disabled>Convert</button>
+
+<div id="output"></div>
+
+<script>
+  const inputFile = document.getElementById('inputFile');
+  const formatSelect = document.getElementById('formatSelect');
+  const convertBtn = document.getElementById('convertBtn');
+  const output = document.getElementById('output');
+
+  let originalImage = null;
+  let originalType = '';
+
+  inputFile.addEventListener('change', () => {
+    output.innerHTML = '';
+    const file = inputFile.files[0];
+    if (!file) {
+      formatSelect.innerHTML = '<option value="">-- Select format --</option>';
+      formatSelect.disabled = true;
+      convertBtn.disabled = true;
+      return;
+    }
+    originalType = file.type;
+    if (originalType === 'image/jpeg') {
+      // JPG input: allow PNG, BMP, TIFF
+      formatSelect.innerHTML = `
+        <option value="">-- Select format --</option>
+        <option value="image/png">PNG</option>
+        <option value="image/bmp">BMP</option>
+        <option value="image/tiff">TIFF</option>
+      `;
+      formatSelect.disabled = false;
+      convertBtn.disabled = false;
+    } else if (originalType === 'image/png') {
+      // PNG input: allow WEBP
+      formatSelect.innerHTML = `
+        <option value="">-- Select format --</option>
+        <option value="image/webp">WEBP</option>
+      `;
+      formatSelect.disabled = false;
+      convertBtn.disabled = false;
+    } else {
+      formatSelect.innerHTML = '<option value="">Unsupported file type</option>';
+      formatSelect.disabled = true;
+      convertBtn.disabled = true;
+      alert('Unsupported file type. Please select a JPG or PNG image.');
+      return;
+    }
+
+    // Load image into an Image object for canvas drawing
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      originalImage = new Image();
+      originalImage.onload = function() {
+        // Image loaded and ready
+      };
+      originalImage.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  convertBtn.addEventListener('click', () => {
+    if (!originalImage) {
+      alert('Please select an image first.');
+      return;
+    }
+    const targetFormat = formatSelect.value;
+    if (!targetFormat) {
+      alert('Please select a target format.');
+      return;
+    }
+
+    // Create canvas and draw the image
+    const canvas = document.createElement('canvas');
+    canvas.width = originalImage.naturalWidth;
+    canvas.height = originalImage.naturalHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(originalImage, 0, 0);
+
+    // Convert canvas to blob with target format
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          alert('Conversion failed.');
+          return;
+        }
+        // Create download link
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        // Set file extension based on target format
+        let ext = '';
+        switch (targetFormat) {
+          case 'image/png':
+            ext = 'png';
+            break;
+          case 'image/bmp':
+            ext = 'bmp';
+            break;
+          case 'image/tiff':
+            ext = 'tiff';
+            break;
+          case 'image/webp':
+            ext = 'webp';
+            break;
+          default:
+            ext = 'img';
+        }
+        a.download = `converted.${ext}`;
+        a.textContent = `Download converted image (${ext.toUpperCase()})`;
+        output.innerHTML = '';
+        output.appendChild(a);
+      },
+      targetFormat,
+      1 // quality (for formats that support it)
+    );
+  });
+</script>
+</body>
+</html>
